@@ -1,0 +1,399 @@
+# Required Libraries
+
+import pandas as pd
+import re
+import nltk 
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger')
+from nltk.corpus import stopwords 
+from nltk.tokenize import word_tokenize, sent_tokenize 
+[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Unzipping tokenizers/punkt.zip.
+[nltk_data] Downloading package wordnet to /root/nltk_data...
+[nltk_data]   Unzipping corpora/wordnet.zip.
+[nltk_data] Downloading package stopwords to /root/nltk_data...
+[nltk_data]   Unzipping corpora/stopwords.zip.
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Unzipping taggers/averaged_perceptron_tagger.zip.
+Dataset
+Dataset is used from online retail data of a gift shop.
+Attributes are InvoiceNo, StockCode, Description, Quantity, InvoiceDate UnitPrice, CustomerID, Country.
+data = pd.read_csv('/content/drive/My Drive/Academic projects/Supply Chain Analytics/OnlineRetail.csv',  encoding= 'unicode_escape')
+data.head()
+InvoiceNo	StockCode	Description	Quantity	InvoiceDate	UnitPrice	CustomerID	Country
+0	536365	85123A	WHITE HANGING HEART T-LIGHT HOLDER	6	12/1/2010 8:26	2.55	17850.0	United Kingdom
+1	536365	71053	WHITE METAL LANTERN	6	12/1/2010 8:26	3.39	17850.0	United Kingdom
+2	536365	84406B	CREAM CUPID HEARTS COAT HANGER	8	12/1/2010 8:26	2.75	17850.0	United Kingdom
+3	536365	84029G	KNITTED UNION FLAG HOT WATER BOTTLE	6	12/1/2010 8:26	3.39	17850.0	United Kingdom
+4	536365	84029E	RED WOOLLY HOTTIE WHITE HEART.	6	12/1/2010 8:26	3.39	17850.0	United Kingdom
+# checking actual and unique in each attibutes.
+
+for i in data.columns:
+  print("Actual number of values",i,len(data[i]))
+  print("Unique number of values",i,len(data[i].unique()))
+Actual number of values InvoiceNo 541909
+Unique number of values InvoiceNo 25900
+Actual number of values StockCode 541909
+Unique number of values StockCode 4070
+Actual number of values Description 541909
+Unique number of values Description 4224
+Actual number of values Quantity 541909
+Unique number of values Quantity 722
+Actual number of values InvoiceDate 541909
+Unique number of values InvoiceDate 23260
+Actual number of values UnitPrice 541909
+Unique number of values UnitPrice 1630
+Actual number of values CustomerID 541909
+Unique number of values CustomerID 4373
+Actual number of values Country 541909
+Unique number of values Country 38
+data.isnull().sum()
+InvoiceNo           0
+StockCode           0
+Description      1454
+Quantity            0
+InvoiceDate         0
+UnitPrice           0
+CustomerID     135080
+Country             0
+dtype: int64
+# Dropped null values because imputation in not possible in Description column and Customer ID
+
+data.dropna(inplace=True)
+data.isnull().sum()
+InvoiceNo      0
+StockCode      0
+Description    0
+Quantity       0
+InvoiceDate    0
+UnitPrice      0
+CustomerID     0
+Country        0
+dtype: int64
+Lets create new fetures from "Description" Column.
+POS tagging of Description column for taking out features as a category.
+
+Fetched 'noun' as a value and made it a new column name 'Product Type'
+
+Also take out colours from 'Description' and made a new column name "Colour_type" .
+
+colours = ['red','orange', 'yellow','green', 'blue', 'indigo','violet','purple','pink','silver', 'gold', 'beige', 'brown', 'grey', 'gray', 'black', 'white', 'cream']
+
+stop_words = set(stopwords.words('english'))
+Product_type = []
+Colour_type = []
+dataset=data.head(50000)
+for row in dataset.iloc[:,2]:
+ s=" "
+  description = re.sub('[^a-zA-Z]'," ", str(row).lower()) #cleaning of text data
+  wordsList = nltk.word_tokenize(description) #tokenization
+  wordsList = [nltk.stem.WordNetLemmatizer().lemmatize(w, 'n') for w in wordsList if not w in stop_words] # lemmitization
+
+  flag=False
+  for w in wordsList:
+    if w in colours:
+      Colour_type.append(w)
+      flag=True
+      break
+  if flag==False:
+    Colour_type.append("no_color") #taking out colours from description
+
+  tagged = nltk.pos_tag(wordsList)
+
+  for tag in tagged:
+    if tag[1]=='NN' :
+      s+=tag[0] +  " "
+  Product_type.append(s)
+# Adding new columns in dataframe 
+
+dataset['Product Type']=Product_type
+dataset['Colour_type']=Colour_type
+dataset.head()
+# Dropped "Description"and "InvoiceDate" columns
+
+X = dataset.drop(["Description","InvoiceDate"],axis=1)
+X.head()
+Created a new feature name "Revenue"
+revenue = UnitPrice * Quantity
+X['Revenue'] = X['UnitPrice'] * X['Quantity']
+X.head()
+InvoiceNo	StockCode	Quantity	UnitPrice	CustomerID	Country	Product Type	Colour_type	Revenue
+0	536365	85123A	6	2.55	17850.0	United Kingdom	heart light holder	white	15.30
+1	536365	71053	6	3.39	17850.0	United Kingdom	metal lantern	white	20.34
+2	536365	84406B	8	2.75	17850.0	United Kingdom	cream heart coat hanger	cream	22.00
+3	536365	84029G	6	3.39	17850.0	United Kingdom	union flag water bottle	no_color	20.34
+4	536365	84029E	6	3.39	17850.0	United Kingdom	heart	red	20.34
+# Label encoding of categorical features
+
+from sklearn import preprocessing
+label_encoder = preprocessing.LabelEncoder()
+
+for col in ["InvoiceNo", "StockCode", "CustomerID","Country", "Product Type","Colour_type"]:
+  X[col] = label_encoder.fit_transform(X[col])
+X.info()
+!pip install kmodes 
+# Changed the data type of attributes
+
+X = X.astype('category')
+X.iloc[:, 2] = X.iloc[:, 2].astype(float)
+X.iloc[:, 3] = X.iloc[:, 3].astype(float)
+X.iloc[:, 8] = X.iloc[:, 3].astype(float)
+X.info()
+<class 'pandas.core.frame.DataFrame'>
+Int64Index: 50000 entries, 0 to 79177
+Data columns (total 9 columns):
+ #   Column        Non-Null Count  Dtype   
+---  ------        --------------  -----   
+ 0   InvoiceNo     50000 non-null  category
+ 1   StockCode     50000 non-null  category
+ 2   Quantity      50000 non-null  float64 
+ 3   UnitPrice     50000 non-null  float64 
+ 4   CustomerID    50000 non-null  category
+ 5   Country       50000 non-null  category
+ 6   Product Type  50000 non-null  category
+ 7   Colour_type   50000 non-null  category
+ 8   Revenue       50000 non-null  float64 
+dtypes: category(6), float64(3)
+memory usage: 2.3 MB
+# Train test split of new dataframe X
+
+from sklearn.model_selection import train_test_split
+train, test = train_test_split(X, train_size=0.8, random_state = 0)
+Cluster the similar items for new attribute cluster number, for this K-prototype clustering is used.
+# Checking the optimal values of 'K'
+
+import matplotlib.pyplot as plt
+from kmodes.kprototypes import KPrototypes
+
+cost = []
+for num_clusters in list(range(2,15)):
+    kproto = KPrototypes(n_clusters=num_clusters, init='Cao')
+    kproto.fit_predict(train, categorical=[0,1,4,5,6,7])
+    cost.append(kproto.cost_)
+    labels=kproto.labels_
+plt.plot(cost)
+# New attribute cluster number is generated
+
+kproto = KPrototypes(n_clusters=3, init='Cao')
+kproto.fit_predict(train, categorical=[0,1,4,5,6])
+print(kproto.cost_)
+labels=kproto.labels_
+# Adding new attribute
+
+train["Cluster number"]=labels
+train
+# Now added "InvoiceDate" in the dataframe
+
+mergedDf = train.merge(pd.DataFrame(dataset["InvoiceDate"]), left_index=True, right_index=True)
+mergedDf
+Feature engineering of "InvoiceDate" column
+from datetime import datetime
+
+year = []
+month = []
+day = []
+dayofweek = []
+for row in mergedDf["InvoiceDate"]:
+  dt=datetime.strptime(row, '%m/%d/%Y %H:%M')
+  year.append(dt.year)
+  month.append(dt.month)
+  day.append(dt.day)
+  dayofweek.append(dt.strftime("%w"))
+
+mergedDf['Year']=year
+mergedDf["Month"]=month
+mergedDf["Day"]=day
+mergedDf['DayOfWeek']=dayofweek
+mergedDf.drop(['InvoiceDate'],axis=1, inplace=True)
+mergedDf.head()
+mergedDf.to_csv('/content/drive/My Drive/Academic projects/Supply Chain Analytics/merfedDf.csv')
+mergedDf = pd.read_csv('/content/drive/My Drive/Academic projects/Supply Chain Analytics/merfedDf.csv')
+mergedDf.drop(['Unnamed: 0'], axis =1, inplace=True)
+mergedDf.head()
+Classification of test data into number of clusters
+Cluster numbers were treated as a target variable as the objective was to match the records from the validation and testing sets with the clusters from the training set.
+# Splitting of merdedDF dataframe into traina nd validation
+
+from sklearn.model_selection import train_test_split
+train_, val_= train_test_split(mergedDf, train_size = 0.8, random_state = 0)
+train_y=train_["Cluster number"]
+train_x=train_.drop(['Cluster number'],axis=1,inplace=False)
+
+val_y=val_["Cluster number"]
+val_x=val_.drop(['Cluster number'],axis=1,inplace=False)
+For classification
+
+Linear SVC is used. and it is giving best result among other machine leaning algorithms.
+from sklearn.svm import LinearSVC 
+model1 = LinearSVC()
+model1.fit(train_x,train_y)
+# validating on test data
+
+pred_y = model1.predict(val_x)
+# Preformance evaluation
+from sklearn.metrics import accuracy_score
+accuracy_score(val_y,pred_y)
+# Adding "InvoiceDate" in test data
+
+test_Df = test.merge(pd.DataFrame(dataset["InvoiceDate"]), left_index=True, right_index=True)
+test_Df
+# Feature engineering of "InvoiceDate" column
+
+from datetime import datetime
+
+year = []
+month = []
+day = []
+dayofweek = []
+for row in test_Df["InvoiceDate"]:
+  dt=datetime.strptime(row, '%m/%d/%Y %H:%M')
+  year.append(dt.year)
+  month.append(dt.month)
+  day.append(dt.day)
+  dayofweek.append(dt.strftime("%w"))
+
+test_Df['Year']=year
+test_Df["Month"]=month
+test_Df["Day"]=day
+test_Df['DayOfWeek']=dayofweek
+test_Df.drop(['InvoiceDate'],axis=1, inplace=True)
+
+test_Df=test_Df.reset_index()
+test_Df.drop(["index"],axis=1, inplace = True)
+test_Df.head()
+
+test_Df.head()
+# Prediction of cluster_number on test data
+
+test_Df['Cluster number'] = model1.predict(test_Df)
+test_Df 
+Prediction of "Quantity" column for the products demands
+train_y=train_["Quantity"].astype('int')
+train_x=train_.drop(['Quantity'], axis=1,inplace=False)
+
+test_Df_y=test_Df["Quantity"].astype('int')
+test_Df_x=test_Df.drop(['Quantity'],axis=1,inplace=False)
+Random Forest Classifier
+
+from sklearn.ensemble import RandomForestClassifier
+
+clf = RandomForestClassifier(bootstrap=True,ccp_alpha=0.0,
+                                                   max_depth=None,
+                                                   max_features='auto',
+                                                   max_leaf_nodes=None,
+                                                   max_samples=None,
+                                                   min_impurity_decrease=0.0,
+                                                   min_impurity_split=None,
+                                                   min_samples_leaf=1,
+                                                   min_samples_split=2,
+                                                   min_weight_fraction_leaf=0.0,
+                                                   n_estimators=100,
+                                                   n_jobs=None,)
+clf.fit(train_x, train_y)
+prediction_test = clf.predict(test_Df_x)
+prediction_test
+from sklearn.metrics import f1_score
+f1_score(test_Df_y, prediction_test, average='micro')
+accuracy_score(test_Df_y, prediction_test)
+# Hyperparameter tuning of RAndom forest algorithm
+
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.ensemble import RandomForestRegressor
+from pprint import pprint
+import numpy as np
+
+
+# Number of trees in random forest
+n_estimators = [int(x) for x in np.linspace(start = 200, stop = 2000, num = 10)]
+# Number of features to consider at every split
+max_features = ['auto', 'sqrt']
+# Maximum number of levels in tree
+max_depth = [int(x) for x in np.linspace(10, 110, num = 11)]
+max_depth.append(None)
+# Minimum number of samples required to split a node
+min_samples_split = [2, 5, 10]
+# Minimum number of samples required at each leaf node
+min_samples_leaf = [1, 2, 4]
+# Method of selecting samples for training each tree
+bootstrap = [True, False]
+# Create the random grid
+random_grid = {'n_estimators': n_estimators,
+               'max_features': max_features,
+               'max_depth': max_depth,
+               'min_samples_split': min_samples_split,
+               'min_samples_leaf': min_samples_leaf,
+               'bootstrap': bootstrap}
+pprint(random_grid)
+
+
+
+# Use the random grid to search for best hyperparameters
+# First create the base model to tune
+rf = RandomForestRegressor()
+# Random search of parameters, using 3 fold cross validation, 
+# search across 100 different combinations, and use all available cores
+rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 100, cv = 3, verbose=2, random_state=42, n_jobs = -1)
+# Fit the random search model
+rf_random.fit(train_x, train_y)
+# KNN
+
+from sklearn.neighbors import KNeighborsClassifier
+
+neigh = KNeighborsClassifier(n_neighbors=3)
+neigh.fit(train_x, train_y)
+knn=neigh.predict(test_Df_x)
+print(accuracy_score(test_Df_y, knn))
+
+# SVC with kernel 
+
+from sklearn import svm
+from sklearn.svm import SVC
+
+rbf_svc = svm.SVC(kernel='rbf')
+rbf_svc.fit(train_x, train_y)
+
+rbf=rbf_svc.predict(test_Df_x)
+accuracy_score(test_Df_y, rbf)
+# AdaBoost
+
+ from sklearn.ensemble import AdaBoostClassifier
+
+ad = AdaBoostClassifier(n_estimators=100, random_state=0)
+ad.fit(train_x, train_y)
+adb=ad.predict(test_Df_x)
+print(accuracy_score(test_Df_y, adb))
+# logistic
+
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(multi_class='ovr')
+lr.fit(train_x, train_y)
+lrc=lr.predict(test_Df_x)
+print(accuracy_score(test_Df_y, lrc))
+
+# Naive base Classifier
+
+from sklearn.naive_bayes import GaussianNB
+
+lr = GaussianNB()
+lr.fit(train_x, train_y)
+lrc=lr.predict(test_Df_x)
+print(accuracy_score(test_Df_y, lrc))
+# Decision Tree Classifier
+
+from sklearn.tree import DecisionTreeClassifier 
+
+dtree_model = DecisionTreeClassifier().fit(train_x, train_y)
+dtree_predictions = dtree_model.predict(test_Df_x)
+accuracy_score(test_Df_y, dtree_predictions)
+# GradientBoostingClassifier
+
+from sklearn.ensemble import GradientBoostingClassifier
+
+gb=GradientBoostingClassifier()
+gb.fit(train_x, train_y)
+gbc=lr.predict(test_Df_x)
+print(accuracy_score(test_Df_y, gbc))
