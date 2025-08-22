@@ -1,4 +1,4 @@
-## Supply Chain Analytics Using Python
+# Supply Chain Analytics Using Python
 
 # Overview
 
