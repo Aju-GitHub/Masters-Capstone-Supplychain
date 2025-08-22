@@ -8,7 +8,13 @@ This project demonstrates advanced analytics and machine learning techniques app
 
 Masters_Capstone_Supplychain/
 
-/- 
+/- Elbow Method for optimal k - Contains optimal k value plot
+
+/- README.md - Documentation
+
+/- Supply chain Analytics Python Code.ipynb - Full python code
+
+/- Supply chain Analytics document - Contains full document pdf
 
 # Problem Statement
 In highly competitive markets, accurately predicting customer demand is critical to avoid overstocking, stockouts, and unnecessary logistics expenses. Supply chain management faces challenges such as demand volatility, supply risks, and lead times. Applying data-driven forecasting and optimization enables businesses to meet customer needs efficiently while minimizing costs.
