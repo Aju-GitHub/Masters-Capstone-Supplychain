@@ -53,3 +53,13 @@ In highly competitive markets, accurately predicting customer demand is critical
 
 Limitations and Future Work
 Current models rely mostly on historical data and do not incorporate real-time external factors such as economic shifts or supply disruptions. Future enhancements could integrate dynamic market indicators, advanced NLP on textual product data, and real-time anomaly detection feeding back into predictive models.
+
+**Rights and Usage:**
+
+All reports, documentation, and related artifacts are the intellectual property of Ajmal M S.
+
+Shared resources are provided solely as a record of my involvement, competencies, and learning outcomes.
+
+No content from this repository may be copied, altered, shared, or reused without explicit permission.
+
+© Ajmal M S, 2025
